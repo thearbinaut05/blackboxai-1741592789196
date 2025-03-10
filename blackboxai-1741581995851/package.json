@@ -1,0 +1,12 @@
+{
+  "name": "crypto-mining-withdrawal",
+  "version": "1.0.0",
+  "description": "Crypto mining withdrawal interface",
+  "main": "scripts/server.js",
+  "scripts": {
+    "start": "cd public && python3 -m http.server 8000"
+  },
+  "dependencies": {
+    "ethers": "^5.7.2"
+  }
+}
