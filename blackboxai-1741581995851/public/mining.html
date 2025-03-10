@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mining & DeFi Optimizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body class="bg-gray-900 text-white min-h-screen font-[Inter]">
+    <div class="container mx-auto px-4 py-8 max-w-3xl">
+        <!-- Mining Section -->
+        <div class="bg-gray-800 rounded-xl p-8 shadow-xl mb-8">
+            <h1 class="text-3xl font-bold mb-6 text-center">Mining Optimizer</h1>
+            
+            <!-- Current Algorithm -->
+            <div class="mb-8 text-center">
+                <h2 class="text-xl font-semibold mb-4">Current Algorithm</h2>
+                <div class="bg-gray-700 p-4 rounded-lg">
+                    <p id="current-algo" class="text-2xl font-bold text-blue-400">ethash</p>
+                    <p id="hashrate" class="text-lg text-gray-400 mt-2">0 H/s</p>
+                </div>
+            </div>
+
+            <!-- Profitability -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">Profitability (24h)</h2>
+                <div class="grid grid-cols-3 gap-4">
+                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                        <p class="text-gray-400 text-sm">Ethash</p>
+                        <p id="ethash-profit" class="text-xl font-bold text-green-400">$0.00</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                        <p class="text-gray-400 text-sm">KawPoW</p>
+                        <p id="kawpow-profit" class="text-xl font-bold text-green-400">$0.00</p>
+                    </div>
+                    <div class="bg-gray-700 p-4 rounded-lg text-center">
+                        <p class="text-gray-400 text-sm">AutoLykos2</p>
+                        <p id="autolykos2-profit" class="text-xl font-bold text-green-400">$0.00</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Stats -->
+            <div class="mb-8">
+                <h2 class="text-xl font-semibold mb-4">Network Statistics</h2>
+                <div class="bg-gray-700 p-4 rounded-lg space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Network Difficulty:</span>
+                        <span id="network-difficulty" class="font-semibold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Network Hashrate:</span>
+                        <span id="network-hashrate" class="font-semibold">0 H/s</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DeFi Section -->
+        <div class="bg-gray-800 rounded-xl p-8 shadow-xl">
+            <h2 class="text-3xl font-bold mb-6 text-center">DeFi Optimizer</h2>
+            
+            <!-- Flash Loan Stats -->
+            <div class="mb-8">
+                <h3 class="text-xl font-semibold mb-4">Flash Loan Opportunities</h3>
+                <div class="bg-gray-700 p-4 rounded-lg space-y-4">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Active Pairs:</span>
+                        <span id="active-pairs" class="font-semibold">0</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Profit Opportunities:</span>
+                        <span id="profit-opportunities" class="font-semibold">0</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls -->
+            <div class="grid grid-cols-2 gap-4">
+                <button id="start-mining" class="bg-green-600 hover:bg-green-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200">
+                    Start Mining & Trading
+                </button>
+                <button id="stop-mining" class="bg-red-600 hover:bg-red-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200" disabled>
+                    Stop All Operations
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let mining = false;
+        let defiTrading = false;
+
+        async function updateStats() {
+            try {
+                // Get mining stats
+                const miningResponse = await fetch('/api/mining/stats');
+                const miningStats = await miningResponse.json();
+                
+                // Update mining UI
+                document.getElementById('current-algo').textContent = miningStats.currentAlgorithm;
+                document.getElementById('hashrate').textContent = formatHashrate(miningStats.profitStats[miningStats.currentAlgorithm].hashrate);
+                
+                // Update profitability
+                for (const algo in miningStats.profitStats) {
+                    document.getElementById(`${algo}-profit`).textContent = 
+                        `$${miningStats.profitStats[algo].profit.toFixed(2)}`;
+                }
+                
+                // Update network stats
+                document.getElementById('network-difficulty').textContent = 
+                    formatNumber(miningStats.profitStats[miningStats.currentAlgorithm].difficulty);
+                document.getElementById('network-hashrate').textContent = 
+                    formatHashrate(miningStats.profitStats[miningStats.currentAlgorithm].hashrate);
+
+                // Get DeFi stats
+                const defiResponse = await fetch('/api/defi/stats');
+                const defiStats = await defiResponse.json();
+                
+                // Update DeFi UI
+                document.getElementById('active-pairs').textContent = defiStats.activePairs.length;
+                document.getElementById('profit-opportunities').textContent = 
+                    (await defiStats.opportunities).length;
+
+            } catch (error) {
+                console.error('Error updating stats:', error);
+            }
+        }
+
+        function formatHashrate(hashrate) {
+            const units = ['H/s', 'KH/s', 'MH/s', 'GH/s', 'TH/s', 'PH/s'];
+            let unitIndex = 0;
+            
+            while (hashrate >= 1000 && unitIndex < units.length - 1) {
+                hashrate /= 1000;
+                unitIndex++;
+            }
+            
+            return `${hashrate.toFixed(2)} ${units[unitIndex]}`;
+        }
+
+        function formatNumber(number) {
+            return new Intl.NumberFormat().format(number);
+        }
+
+        document.getElementById('start-mining').addEventListener('click', async () => {
+            try {
+                // Start mining
+                const miningResponse = await fetch('/api/mining/start', { method: 'POST' });
+                if (miningResponse.ok) {
+                    mining = true;
+                }
+
+                // Start DeFi trading
+                const defiResponse = await fetch('/api/defi/start', { method: 'POST' });
+                if (defiResponse.ok) {
+                    defiTrading = true;
+                }
+
+                if (mining && defiTrading) {
+                    document.getElementById('start-mining').disabled = true;
+                    document.getElementById('stop-mining').disabled = false;
+                }
+            } catch (error) {
+                console.error('Error starting operations:', error);
+            }
+        });
+
+        document.getElementById('stop-mining').addEventListener('click', async () => {
+            try {
+                // Stop mining
+                const miningResponse = await fetch('/api/mining/stop', { method: 'POST' });
+                if (miningResponse.ok) {
+                    mining = false;
+                }
+
+                // Stop DeFi trading
+                const defiResponse = await fetch('/api/defi/stop', { method: 'POST' });
+                if (defiResponse.ok) {
+                    defiTrading = false;
+                }
+
+                if (!mining && !defiTrading) {
+                    document.getElementById('start-mining').disabled = false;
+                    document.getElementById('stop-mining').disabled = true;
+                }
+            } catch (error) {
+                console.error('Error stopping operations:', error);
+            }
+        });
+
+        // Update stats every 2 seconds
+        setInterval(updateStats, 2000);
+        
+        // Initial update
+        updateStats();
+    </script>
+</body>
+</html>
